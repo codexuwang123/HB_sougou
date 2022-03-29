@@ -7,60 +7,54 @@
 
 import time
 from to_sql import save_data_to_sql
-from spider import Spider_data
-from parse import format_base_spdb
 from redis_client import redis_connect
-from multiprocessing import Pool
-import threading
-
-# 实例化sql链接
+import uuid
+from parse import format_base_spdb
+import json
+from concurrent.futures import ThreadPoolExecutor
+from settings import set_
 s_data = save_data_to_sql.Save_score_to_sql()
 
-
-# 主函数调用
-def last_mains():
-    # 数据库获取关键次列表
-    keyword_list = s_data.get_keyword()
-    if keyword_list:
-        i = ''
-        for i in keyword_list:
-            for n in range(1, 6):
-
-                spider_self = Spider_data.Spider_desc_sougou(wd=i.get('Search_Keyword'))
-                spider_self.spider_sougou(pn=n, keyword=spider_self.wd)
-
-        # 更新爬虫状态
-        s_data.undate_data(status_='1', keyword=i.get('Search_Keyword'))
-        # 关闭数据库连接
-        # s_data.close()
-        return keyword_list
-    else:
-        print('========温馨提示：没有有效关键词需要爬取=======')
+# 总调用
+def main_parse(dict):
+    # print(i, '--------')
+    print('线程进来了================')
+    print(dict, '==========---')
+    new_tittle = dict.get('tittle')
+    new_url = dict.get('url')
+    true_url = format_base_spdb.get_sougou_rue_url(skip_url=new_url)
+    details_data, true_urls = format_base_spdb.get_true(url=true_url)
+    dict['true_url'] = true_url
+    new_keyword = dict.get('keyword')
+    number = str(uuid.uuid1()).replace('-', '')
+    dict['number'] = number
+    format_base_spdb.get_(new_keyword=new_keyword, new_tittle=new_tittle, details_data=details_data, true_url=true_url,
+                          dict=dict)
 
 
 if __name__ == '__main__':
 
-    keyword_list = last_mains()
-    num = 4
-    p = Pool(num)
-    red = redis_connect.Redis_connect()
-    flag = True
-    while flag:
+    while True:
         print('等待新任务中========')
         try:
-            flag_data = red.search_all_data(redis_key='sougou')
+            conn = redis_connect.Redis_connect()
+            flag_data = conn.search_all_data(redis_key='sougou')
+            print(flag_data, '''==============11111111111111''')
+            time.sleep(3)
+            print('等待新任务中========')
             flags = len(flag_data)
-            red = redis_connect.Redis_connect()
-            get_ = format_base_spdb.get_
-            # 最大任务数
-            process_num = flags
-            for i in range(process_num):
-                p.apply_async(get_, args=())
-            p.close()
-            p.join()
-            if len(flag_data) == 0:
-                for k in keyword_list:
-                    s_data.undate_data(status_='2', keyword=k.get('Search_Keyword'))
+            if flags == 0:
+                continue
+            else:
+                # 实例化sql链接
+                dta = conn.search_data_redis(redis_key='sougou')
+                dict = json.loads(dta)
+                book_name = dict.get('book_name')
+                data_book = dict.get('data')
+                # 最大任务数
+                with ThreadPoolExecutor(max_workers=set_.get('max_workers')) as f:
+                    results = f.map(main_parse, data_book)
+                s_data.undate_data(status_='2', keyword=book_name)
         except Exception as e:
-            print(e,'=============')
+            print(e, '=============')
         time.sleep(3)

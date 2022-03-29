@@ -120,6 +120,24 @@ test_sql = {
     'db': 'pythonr_eptile'
 }
 
+# 测试redis库地址
+test_redis = {
+
+    'host': '127.0.0.1',
+    'port': 6379,
+    'user': '',
+    'password': '123456',
+    'db': 4
+}
+
+# 正式库redis地址
+true_redis = {
+    'host': '',
+    'port': 6379,
+    'user': '',
+    'password': '',
+    'db': ''
+}
 
 # 设置日志函数
 def set_log():
@@ -140,9 +158,6 @@ def set_log():
 # 基础配置
 
 set_ = {
-    'max_page': 200,  # 最大页数 200
-
+    'max_page': 2,  # 最大页数 200
+    'max_workers': 8  # 最大线程数量
 }
-
-
-
