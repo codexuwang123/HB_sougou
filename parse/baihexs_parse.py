@@ -9,8 +9,8 @@ import re
 
 #解析 www.baihexs.com
 
-def baihexs_par(data,dict):
-    dict_details = {}
+def baihexs_par(data,dict,dict_details):
+
     author = re.findall('<div id="author">.*?<a href=".*?>(.*?)</a>', data, re.S)
     if author:
         dict_details['author'] = author[0].strip()

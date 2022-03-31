@@ -34,7 +34,7 @@ class Spider_desc_sougou():
         logging_.info('搜索引擎搜狗，正在爬取={}相关内容。'.format(self.wd))
 
     # 解析主函数
-    def spider_sougou(self, page, list_redis, keyword=None, ):
+    def spider_sougou(self, page, list_redis, section_name, author,keyword=None):
 
         self.url = 'https://www.sogou.com/web?'
         self.params = {
@@ -64,7 +64,7 @@ class Spider_desc_sougou():
             tittle = re.findall('<h3.*?class="vr-title.*?".*?<em>(.*?)</a>', res.text, re.S)
 
             format_base_spdb.format_text(first_data_list=data, tittle_list=tittle, keyword=keyword, ssin=None,
-                                         list_redis=list_redis)
+                                         list_redis=list_redis,section_name=section_name, author=author)
         else:
             print(res.text)
 
@@ -77,17 +77,19 @@ def last_mains():
         for i in keyword_list:
             list_redis = []
             dict_redis = {}
-            dict_redis['book_name'] = i.get('Search_Keyword')
+            dict_redis['book_name'] = i.get('search_keyword')
+            section_name = i.get('section_name')
+            author_name = i.get('author')
             print(dict_redis)
             for n in range(1, set_.get('max_page')):
-                spider_self = Spider_desc_sougou(wd=i.get('Search_Keyword'))
-                spider_self.spider_sougou(page=n, keyword=spider_self.wd, list_redis=list_redis)
+                spider_self = Spider_desc_sougou(wd=i.get('search_keyword'))
+                spider_self.spider_sougou(page=n, keyword=spider_self.wd, list_redis=list_redis,section_name=section_name,author=author_name)
             dict_redis['data'] = list_redis
             dict_ = json.dumps(dict_redis, ensure_ascii=False)
             print(dict_)
             conn.insert_data_redis(redis_key='sougou', values=dict_)
             # 更新爬虫状态
-            s_data.undate_data(status_='1', keyword=i.get('Search_Keyword'))
+            s_data.undate_data(status_='1', keyword=i.get('search_keyword'))
             print('redis 数据存放成功')
 
     else:

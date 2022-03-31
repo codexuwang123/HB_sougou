@@ -9,8 +9,8 @@ import re
 
 #解析www.haipu-xs.com
 
-def haipu_xs_par(data,dict):
-    dict_details = {}
+def haipu_xs_par(data,dict,dict_details):
+
     author = re.findall('<div class="book-text">.*?<span>(.*?)</span>', data, re.S)
     if author:
         dict_details['author'] = author[0].replace('著','').strip()

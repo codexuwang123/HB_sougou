@@ -47,7 +47,7 @@ from . import shouda88_parse
 from . import ujwang_parse
 from . import laishu8
 from  . import qmzhongwen_parse
-from settings import set_log
+from settings import code_new
 from redis_client import redis_connect
 import urllib3
 from settings import ua
@@ -114,8 +114,8 @@ def get_true(url, ssin=None):
 
 
 # 详情页解析
-def format_data(data, dict):
-    dict_details = {}
+def format_data(data, dict,dict_details):
+    # dict_details = {}
     author = ''
     # 作者名称
     author2 = re.findall('<meta property="og:novel:author" content="(.*?)"', data)
@@ -153,7 +153,7 @@ def format_data(data, dict):
 
 
 # 首页数据解析
-def format_text(first_data_list, tittle_list, keyword, list_redis, ssin=None):
+def format_text(first_data_list, tittle_list, keyword, list_redis,section_name, author, ssin=None):
     list = []
     for i, n in zip(first_data_list, tittle_list):
         number = str(uuid.uuid1()).replace('-', '')
@@ -175,10 +175,10 @@ def format_text(first_data_list, tittle_list, keyword, list_redis, ssin=None):
         # 真实链接
         dict['true_url'] = ''
         dict['keyword'] = keyword
+        dict['section_name'] = section_name
+        dict['author_name'] = author
         list_redis.append(dict)
-        # dict_ = json.dumps(dict)
-        # print(dict_, '===========')
-        # conn.insert_data_redis(redis_key='sougou', values=dict_)
+
 
 
 # 搜狗获取真是链接程序
@@ -211,11 +211,71 @@ def get_sougou_rue_url(skip_url):
                     return data1[0]
             return skip_url
 
+# 解析规则
+def parse_html_to_str(htmlbody):
+    # 去除页面中所有的 script 标签
+    re_script = re.compile('<script[^>]*>[\s\S]*?<\/script>', re.I)
+    re_style = re.compile('<\s*style[^>]*>[^<]*<\s*/\s*style\s*>', re.I)  # 去除页面中的style 标签
+    del_label = re.compile(r'<[^>]+>', re.S)  # 去除页面中所有的标签
+
+    content_del = re_script.sub("", htmlbody)
+    content_del = re_style.sub("", content_del)
+    content_del = del_label.sub("", content_del)
+    # 去除标签后 会出现很多的空格 或者 换行符 ，对其进行处理
+    content_del = content_del.replace('\t', '').replace(' ', '')
+    # 处理后发现 有很多的空行，按 换行符进行分割
+    content_del = content_del.split('\n')
+    content = ''
+    # 处理空行
+    for c in content_del:
+        if c:
+            content = content + c.strip() + '\n'
+    # 去除所有空格
+    new_1 = re.sub('\s+', '', content)
+    # 循环去除特殊符号
+    for i in code_new:
+        new_1 = new_1.replace('{}'.format(i), '')
+    return new_1
 
 # 主要解析程序
-def get_(new_keyword, new_tittle, details_data, true_url,dict):
-    print('线程进来了================')
+def get_(new_keyword, new_tittle, details_data, true_url,number,dict):
+
     if new_keyword in new_tittle:
+        print('线程进来了================')
+        book_dict = {}
+        new_dict = {}
+        sql_server = save_data_to_sql.Save_score_to_sql()
+        # 解析详情页数据
+        book_dict['number'] = number
+        book_dict['book_name'] = new_keyword
+        book_dict['true_url'] = true_url
+        book_html = parse_html_to_str(htmlbody=details_data)
+        book_name = dict['keyword']
+        book_author = dict['author_name']
+        book_section = dict['section_name']
+        book_dict['book_detail'] = book_html
+        name_score = 0.0
+        if book_name in book_html:
+            name_score = name_score + 1.0
+            new_dict['book_name_score'] = name_score
+        else:
+            new_dict['book_name_score'] = 0.0
+        book_author_ = 0.0
+        if book_author in book_html:
+            book_author_ = book_author_ + 1.0
+            new_dict['author_score'] = book_author_
+        else:
+            new_dict['author_score'] = 0.0
+
+        section_list = book_section.split(';')
+        sec_score = 0.0
+        for sec in section_list:
+            if sec in book_html:
+                sec_score = sec_score + 0.2
+        new_dict['section_score'] = sec_score
+        new_dict['weight'] = name_score + book_author_ + sec_score
+        # 详情整页数据存储
+        sql_server.book_html_to_sql(data=book_dict)
         if details_data == '编码异常':
             print('编码异常====', true_url)
             return None
@@ -226,94 +286,94 @@ def get_(new_keyword, new_tittle, details_data, true_url,dict):
             print('服务异常=================', true_url)
             return None
         if 'ximalaya' in true_url:
-            xmla_parse.smly_(data=details_data, dict=dict)
+            xmla_parse.smly_(data=details_data, dict=dict,dict_details=new_dict)
         elif 'https://dushu.baidu.com/' in true_url:
             print('进入百度链接了')
-            parse_baidu.parse_b(url=true_url, dict=dict)
+            parse_baidu.parse_b(url=true_url, dict=dict,dict_details=new_dict)
         elif 'luochen' in true_url:
-            luochen_parse.parse_ysg(data=details_data, dict=dict)
+            luochen_parse.parse_ysg(data=details_data, dict=dict,dict_details=new_dict)
             print('落尘图书')
         elif '来书吧' in details_data:
-            laishu8.lais(data=details_data, dict=dict)
+            laishu8.lais(data=details_data, dict=dict,dict_details=new_dict)
         elif '阅书阁' in details_data:
-            ysg_parse.parse_ysg(data=details_data, dict=dict)
+            ysg_parse.parse_ysg(data=details_data, dict=dict,dict_details=new_dict)
         elif '全本小说网' in new_tittle:
-            qbxsw_parse.qbxsw_parse(data=details_data, dict=dict)
+            qbxsw_parse.qbxsw_parse(data=details_data, dict=dict,dict_details=new_dict)
         elif '蜻蜓FM' in new_tittle:
-            qt_parse.qt_par(data=details_data, dict=dict)
+            qt_parse.qt_par(data=details_data, dict=dict,dict_details=new_dict)
         elif '<p id="summary">' in details_data:
-            mq_parse.mq_par(data=details_data, dict=dict)
+            mq_parse.mq_par(data=details_data, dict=dict,dict_details=new_dict)
         elif '若夏' in new_tittle:
-            rx_parse.rx_par(data=details_data, dict=dict)
+            rx_parse.rx_par(data=details_data, dict=dict,dict_details=new_dict)
         elif '七猫中文网' in new_tittle:
             for i in range(5):
                 time.sleep(1)
                 data2 = qmzhongwen_parse.get_acw_sc_v2(base_url=true_url)
                 if '七猫中文网' in data2:
-                    qmzhongwen_parse.qimao_parse(data=data2, dict=dict)
+                    qmzhongwen_parse.qimao_parse(data=data2, dict=dict,dict_details=new_dict)
                     break
                 else:
                     print('七猫没进去========')
                     continue
         elif 'www.soxs.cc' in true_url:
-            soxs_parse.soxs_par(data=details_data, dict=dict)
+            soxs_parse.soxs_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.xuanshu.com' in true_url:
-            xuanshu_parse.quanshu(data=details_data, dict=dict)
+            xuanshu_parse.quanshu(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.uuxsw' in true_url:
-            uuxshuo_parse.uuxs_par(data=details_data, dict=dict)
+            uuxshuo_parse.uuxs_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'quanben' in true_url:
-            qbxsw_parse.qbxsw_parse(data=details_data, dict=dict)
+            qbxsw_parse.qbxsw_parse(data=details_data, dict=dict,dict_details=new_dict)
         elif 'shuchu' in true_url:
-            shuchu_parse.shuchu_par(data=details_data, dict=dict)
+            shuchu_parse.shuchu_par(data=details_data, dict=dict,dict_details=new_dict)
             print('书橱进来了====')
         elif '66rpg.com' in true_url:
-            rpg66_parse.chenguang_par(data=details_data, dict=dict)
+            rpg66_parse.chenguang_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'wenxue.iqiyi' in true_url:
-            wenxue_iqiy.iqiy(data=details_data, dict=dict)
+            wenxue_iqiy.iqiy(data=details_data, dict=dict,dict_details=new_dict)
         elif 'http://www.sxcnw' in true_url:
-            sxcnw_parse.sxdz_par(data=details_data, dict=dict)
+            sxcnw_parse.sxdz_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.xxsy.net' in true_url:
-            xxshuyuan_parse.xxshuyuan_par(data=details_data, dict=dict)
+            xxshuyuan_parse.xxshuyuan_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'm.sxcnw.net' in true_url:
-            phone_sxcnw.phone_sxcnw(data=details_data, dict=dict)
+            phone_sxcnw.phone_sxcnw(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.yjgmmc' in true_url:
-            yjgmmc_par.eryuet_par(data=details_data, dict=dict)
+            yjgmmc_par.eryuet_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.soxscc.org' in true_url:
-            soxscc_parse.soxscc_par(data=details_data, dict=dict)
+            soxscc_parse.soxscc_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.hongshu.com' in true_url:
-            hongshu_parse.hongshu_par(data=details_data, dict=dict)
+            hongshu_parse.hongshu_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.xsb-xs.com' in true_url:
-            xsb_xs_parse.xsb_xs_par(data=details_data, dict=dict)
+            xsb_xs_parse.xsb_xs_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.jipinxx.com' in true_url:
-            jipinxx_parse.jipinxx_par(data=details_data, dict=dict)
+            jipinxx_parse.jipinxx_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.huaxiangju.com' in true_url:
-            huaxiangju_parse.huaxiangju_par(data=details_data, dict=dict)
+            huaxiangju_parse.huaxiangju_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.baihexs.com' in true_url:
-            baihexs_parse.baihexs_par(data=details_data, dict=dict)
+            baihexs_parse.baihexs_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'm.bxwxorg.com' in true_url:
-            m_bxwxorg_parse.m_bxwxorg_par(data=details_data, dict=dict)
+            m_bxwxorg_parse.m_bxwxorg_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.shouda88.com' in true_url:
-            shouda88_parse.shouda88_par(data=details_data, dict=dict)
+            shouda88_parse.shouda88_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'm.rmxsba.com' in true_url:
-            m_bxwxorg_parse.m_bxwxorg_par(data=details_data, dict=dict)
+            m_bxwxorg_parse.m_bxwxorg_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.18xsorg.com' in true_url:
-            xsorg18_parse.xsorg18_par(data=details_data, dict=dict)
+            xsorg18_parse.xsorg18_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.haipu-xs.com' in true_url:
-            haipu_xs_parse.haipu_xs_par(data=details_data, dict=dict)
+            haipu_xs_parse.haipu_xs_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.biqusz.com' in true_url:
-            biqusz_parse.biqusz_par(data=details_data, dict=dict)
+            biqusz_parse.biqusz_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.zjsw.org' in true_url:
-            zjsw_org_parse.zjsw_org_psr(data=details_data, dict=dict)
+            zjsw_org_parse.zjsw_org_psr(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.tc089.com' in true_url:
-            tc089_parse.tc089_par(data=details_data, dict=dict)
+            tc089_parse.tc089_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.iqixs.com' in true_url:
-            iqixs_parse.iqixs_par(data=details_data, dict=dict)
+            iqixs_parse.iqixs_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.ujwang.com' in true_url:
-            ujwang_parse.ujwang_par(data=details_data, dict=dict)
+            ujwang_parse.ujwang_par(data=details_data, dict=dict,dict_details=new_dict)
         elif 'www.aixswx.com' in true_url:
-            aixswx_parse.aixswx_par(data=details_data, dict=dict)
+            aixswx_parse.aixswx_par(data=details_data, dict=dict,dict_details=new_dict)
         else:
-            format_data(data=details_data, dict=dict)
+            format_data(data=details_data, dict=dict,dict_details=new_dict)
 
         # 数据库存放数据
         sql_server = save_data_to_sql.Save_score_to_sql()

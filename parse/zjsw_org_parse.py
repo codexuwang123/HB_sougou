@@ -8,8 +8,8 @@
 import re
 
 #解析 www.zjsw.org
-def zjsw_org_psr(data,dict):
-    dict_details = {}
+def zjsw_org_psr(data,dict,dict_details):
+
     author = re.findall('<div class="bookname">.*?<em>(.*?)</em>', data, re.S)
     if author:
         dict_details['author'] = author[0].replace('作者：', '').strip()

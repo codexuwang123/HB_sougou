@@ -9,8 +9,8 @@ import re
 
 #解析网址 https://www.xsb-xs.com/
 
-def xsb_xs_par(data,dict):
-    dict_details = {}
+def xsb_xs_par(data,dict,dict_details):
+
     author = re.findall('<div id="info">.*?<p>作.*?者：(.*?)</p>', data, re.S)
     if author:
         dict_details['author'] = author[0]

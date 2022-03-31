@@ -10,8 +10,8 @@ import re
 
 # 解析 www.iqixs.com
 
-def iqixs_par(data, dict):
-    dict_details = {}
+def iqixs_par(data, dict,dict_details):
+
     author = re.findall('<strong class="mr15 ttl">.*?<span>(.*?)</span>', data, re.S)
     if author:
         dict_details['author'] = author[0].replace('作者：', '').strip()

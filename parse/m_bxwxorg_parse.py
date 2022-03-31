@@ -11,8 +11,8 @@ import re
 
 # 解析m.bxwxorg.com
 
-def m_bxwxorg_par(data, dict):
-    dict_details = {}
+def m_bxwxorg_par(data, dict,dict_details):
+
     author = re.findall('<p class="author">.*?<a.*?>(.*?)</a>', data, re.S)
     if author:
         dict_details['author'] = author[0].strip().replace('作者：')

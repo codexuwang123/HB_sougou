@@ -7,8 +7,8 @@
 
 import re
 #解析www.shouda88.com
-def shouda88_par(data,dict):
-    dict_details = {}
+def shouda88_par(data,dict,dict_details):
+
     author = re.findall('<a id="author" href=".*?">(.*?)</a>', data, re.S)
     if author:
         dict_details['author'] = author[0].strip()

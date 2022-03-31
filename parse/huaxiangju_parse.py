@@ -8,8 +8,8 @@
 import re
 
 # 解析www.huaxiangju.com
-def huaxiangju_par(data, dict):
-    dict_details = {}
+def huaxiangju_par(data, dict,dict_details):
+
     author = re.findall('<div class="bookPhr">.*?<dd>(.*?)</dd>', data, re.S)
     if author:
         dict_details['author'] = author[0].strip().replace('作者：')

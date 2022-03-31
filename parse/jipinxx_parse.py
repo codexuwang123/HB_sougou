@@ -8,8 +8,8 @@
 import re
 #解析 www.jipinxx.com
 
-def jipinxx_par(data,dict):
-    dict_details = {}
+def jipinxx_par(data,dict,dict_details):
+
     author = re.findall('<div id="info">.*?<strong>(.*?)</strong>', data, re.S)
     if author:
         dict_details['author'] = author[0]

@@ -8,8 +8,8 @@
 import re
 #解析 www.18xsorg.com
 
-def xsorg18_par(data,dict):
-    dict_details = {}
+def xsorg18_par(data,dict,dict_details):
+
     author = re.findall('<span id="author"><a.*?">(.*?)</a>', data, re.S)
     if author:
         dict_details['author'] = author[0].strip()

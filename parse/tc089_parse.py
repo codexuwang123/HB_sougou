@@ -8,8 +8,8 @@
 import re
 
 #解析 tc089.com
-def tc089_par(data,dict):
-    dict_details = {}
+def tc089_par(data,dict,dict_details):
+
     author = re.findall('<li class="views">(.*?)</li>', data, re.S)
     if author:
         dict_details['author'] = author[0].replace('作者：', '').strip()

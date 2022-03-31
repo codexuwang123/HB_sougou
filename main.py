@@ -29,7 +29,7 @@ def main_parse(dict):
     number = str(uuid.uuid1()).replace('-', '')
     dict['number'] = number
     format_base_spdb.get_(new_keyword=new_keyword, new_tittle=new_tittle, details_data=details_data, true_url=true_url,
-                          dict=dict)
+                          dict=dict,number=number)
 
 
 if __name__ == '__main__':

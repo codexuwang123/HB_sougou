@@ -10,8 +10,8 @@ import re
 
 # 解析www.ujwang.com
 
-def ujwang_par(data, dict):
-    dict_details = {}
+def ujwang_par(data, dict,dict_details):
+
     author = re.findall('<div class="wordage fn-clearfix">.*?</font>(.*?)<font.*?>', data, re.S)
     if author:
         dict_details['author'] = author[0].replace('作者：', '').replace('&nbsp;', '').strip()

@@ -9,8 +9,8 @@ import re
 
 #解析 www.aixswx.com
 
-def aixswx_par(data,dict):
-    dict_details = {}
+def aixswx_par(data,dict,dict_details):
+
     author = re.findall('<a.*?class="author fl">(.*?)</a>', data, re.S)
     if author:
         dict_details['author'] = author[0].replace('作者：', '').replace('&nbsp;', '').strip()
